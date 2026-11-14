@@ -645,7 +645,11 @@ jobs:
           tar xzf src.tgz
           IMAGE_VIEWER="$(find vreels -name ImageViewer.kt -type f -print -quit)"
           test -n "$IMAGE_VIEWER"
-          if ! grep -q '^import androidx.compose.ui.unit.dp
+          if ! grep -Fq "import androidx.compose.ui.unit.dp" "$IMAGE_VIEWER"; then
+            sed -i '/import androidx.compose.ui.text.style.TextOverflow/a\import androidx.compose.ui.unit.dp' "$IMAGE_VIEWER"
+          fi
+          grep -Fq "import androidx.compose.ui.unit.dp" "$IMAGE_VIEWER"
+          echo "Import dp terverifikasi di $IMAGE_VIEWER."
           echo "sdk.dir=$ANDROID_HOME" > vreels/local.properties
           echo "Source VReels ditemukan."
 
