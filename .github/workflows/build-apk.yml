@@ -643,6 +643,121 @@ jobs:
           AA==
           B64
           tar xzf src.tgz
+          IMAGE_VIEWER="$(find vreels -name ImageViewer.kt -type f -print -quit)"
+          test -n "$IMAGE_VIEWER"
+          if ! grep -q '^import androidx.compose.ui.unit.dp
+          echo "sdk.dir=$ANDROID_HOME" > vreels/local.properties
+          echo "Source VReels ditemukan."
+
+      - name: Unit test dan build APK debug
+        working-directory: vreels
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest assembleDebug --console=plain --stacktrace 2>&1 | tee ../build.log
+
+      - name: Verify APK and permissions
+        run: |
+          APK="vreels/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions "$APK" > permissions.txt
+          cat permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "ERROR: APK meminta INTERNET permission."
+            exit 1
+          fi
+          echo "APK ditemukan dan tidak meminta INTERNET permission."
+
+      - name: Upload APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vreels-debug-apk
+          path: vreels/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publikasikan APK ke Releases (tautan unduh langsung)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp vreels/app/build/outputs/apk/debug/app-debug.apk vreels-debug.apk
+          gh release delete latest --yes --cleanup-tag > /dev/null 2>&1 || true
+          gh release create latest vreels-debug.apk --title "vreels debug APK" --notes "Build otomatis run $GITHUB_RUN_ID" --latest
+
+      - name: Simpan log build ke branch build-logs
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/logs
+          if [ -f build.log ]; then cp build.log /tmp/logs/build.log; else echo "build.log tidak ada (gagal sebelum build)" > /tmp/logs/build.log; fi
+          grep -nE "^e: |error:|FAILED|What went wrong|Execution failed|BUILD (SUCCESSFUL|FAILED)|requires libraries|compileSdk" /tmp/logs/build.log | head -n 200 > /tmp/logs/errors.txt || true
+          tail -n 300 /tmp/logs/build.log > /tmp/logs/tail.txt
+          echo "run=$GITHUB_RUN_ID status=${{ job.status }} job_failed_step_hint=see_actions_tab" > /tmp/logs/status.txt
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan build-logs
+          git rm -rf . > /dev/null 2>&1 || true
+          cp /tmp/logs/build.log /tmp/logs/errors.txt /tmp/logs/tail.txt /tmp/logs/status.txt .
+          git add build.log errors.txt tail.txt status.txt
+          git commit -m "Log build $GITHUB_RUN_ID"
+          git push -f origin build-logs
+ "$IMAGE_VIEWER"; then
+            sed -i '/^import androidx.compose.ui.text.style.TextOverflow$/a import androidx.compose.ui.unit.dp' "$IMAGE_VIEWER"
+          fi
+          grep -q '^import androidx.compose.ui.unit.dp
+          echo "sdk.dir=$ANDROID_HOME" > vreels/local.properties
+          echo "Source VReels ditemukan."
+
+      - name: Unit test dan build APK debug
+        working-directory: vreels
+        run: |
+          set -o pipefail
+          gradle testDebugUnitTest assembleDebug --console=plain --stacktrace 2>&1 | tee ../build.log
+
+      - name: Verify APK and permissions
+        run: |
+          APK="vreels/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt2" dump permissions "$APK" > permissions.txt
+          cat permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "ERROR: APK meminta INTERNET permission."
+            exit 1
+          fi
+          echo "APK ditemukan dan tidak meminta INTERNET permission."
+
+      - name: Upload APK (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: vreels-debug-apk
+          path: vreels/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      - name: Publikasikan APK ke Releases (tautan unduh langsung)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp vreels/app/build/outputs/apk/debug/app-debug.apk vreels-debug.apk
+          gh release delete latest --yes --cleanup-tag > /dev/null 2>&1 || true
+          gh release create latest vreels-debug.apk --title "vreels debug APK" --notes "Build otomatis run $GITHUB_RUN_ID" --latest
+
+      - name: Simpan log build ke branch build-logs
+        if: always()
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/logs
+          if [ -f build.log ]; then cp build.log /tmp/logs/build.log; else echo "build.log tidak ada (gagal sebelum build)" > /tmp/logs/build.log; fi
+          grep -nE "^e: |error:|FAILED|What went wrong|Execution failed|BUILD (SUCCESSFUL|FAILED)|requires libraries|compileSdk" /tmp/logs/build.log | head -n 200 > /tmp/logs/errors.txt || true
+          tail -n 300 /tmp/logs/build.log > /tmp/logs/tail.txt
+          echo "run=$GITHUB_RUN_ID status=${{ job.status }} job_failed_step_hint=see_actions_tab" > /tmp/logs/status.txt
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git checkout --orphan build-logs
+          git rm -rf . > /dev/null 2>&1 || true
+          cp /tmp/logs/build.log /tmp/logs/errors.txt /tmp/logs/tail.txt /tmp/logs/status.txt .
+          git add build.log errors.txt tail.txt status.txt
+          git commit -m "Log build $GITHUB_RUN_ID"
+          git push -f origin build-logs
+ "$IMAGE_VIEWER"
+          echo "Import dp terverifikasi di $IMAGE_VIEWER."
           test -f vreels/app/build.gradle.kts
           echo "sdk.dir=$ANDROID_HOME" > vreels/local.properties
           echo "Source VReels ditemukan."
