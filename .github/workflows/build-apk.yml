@@ -1,0 +1,70 @@
+
+name: VReels Android Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Extract VReels source
+        run: |
+          unzip -q vreels-source.zip
+          test -f vreels/app/build.gradle.kts
+          echo "Source VReels ditemukan."
+
+      - name: Run unit tests
+        working-directory: vreels
+        run: gradle testDebugUnitTest
+
+      - name: Build debug APK
+        working-directory: vreels
+        run: gradle assembleDebug
+
+      - name: Verify APK and permissions
+        run: |
+          APK="vreels/app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump permissions "$APK" > permissions.txt
+          if grep -q "android.permission.INTERNET" permissions.txt; then
+            echo "ERROR: APK meminta INTERNET permission."
+            cat permissions.txt
+            exit 1
+          fi
+          echo "APK ditemukan dan tidak meminta INTERNET permission."
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: vreels-debug-apk
+          path: vreels/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          
